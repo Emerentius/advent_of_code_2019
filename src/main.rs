@@ -45,7 +45,11 @@ fn fuel_required() {
 //                                      Day 2
 // ===============================================================================================
 
-fn day_2(_part: crate::Part) {
+const NOUN_PTR: usize = 1;
+const VERB_PTR: usize = 2;
+const DAY_2_PART_2_REQUIRED_OUTPUT: i64 = 19690720;
+
+fn day_2(part: crate::Part) {
     let input: &str = include_str!("day_2_input.txt");
     let mut memory = input
         .trim()
@@ -53,13 +57,33 @@ fn day_2(_part: crate::Part) {
         .map(str::parse::<i64>)
         .map(Result::<_, _>::unwrap)
         .collect::<Vec<_>>();
+
+    match part {
+        Part::One => {
+            // >before running the program, replace position 1 with the value 12 and replace position 2 with the value 2
+            memory[NOUN_PTR] = 12;
+            memory[VERB_PTR] = 2;
+
+            let result = run_intcode_program(memory);
+            println!("{}", result);
+        }
+        Part::Two => {
+            let (noun, verb) = (0..100)
+                .flat_map(|noun| (0..100).map(move |verb| (noun, verb)))
+                .find(|&(noun, verb)| {
+                    memory[NOUN_PTR] = noun;
+                    memory[VERB_PTR] = verb;
+                    run_intcode_program(memory.clone()) == DAY_2_PART_2_REQUIRED_OUTPUT
+                })
+                .unwrap();
+            println!("{}", noun * 100 + verb);
+        }
+    }
+}
+
+fn run_intcode_program(mut memory: Vec<i64>) -> i64 {
     // instruction pointer
     let mut instr_ptr = 0;
-
-    // >before running the program, replace position 1 with the value 12 and replace position 2 with the value 2
-    memory[1] = 12; // noun
-    memory[2] = 2; // verb
-
     loop {
         let opcode = memory[instr_ptr];
         match opcode {
@@ -80,14 +104,15 @@ fn day_2(_part: crate::Part) {
             _ => unreachable!(),
         }
     }
-    println!("{}", memory[0]);
+    memory[0]
 }
 
 fn main() {
     if false {
         day_1(Part::One);
         day_1(Part::Two);
+        day_2(Part::One);
     }
 
-    day_2(Part::One);
+    day_2(Part::Two);
 }
