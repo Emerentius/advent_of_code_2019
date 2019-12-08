@@ -110,25 +110,15 @@ fn run_intcode_program(mut memory: Vec<i64>) -> i64 {
 // ===============================================================================================
 //                                      Day 3
 // ===============================================================================================
-
-// in manhattan distance, a square is a circle
-const GRID_RADIUS: i32 = 10000;
-
 fn day_3(_part: Part) {
+    use std::collections::{HashMap, HashSet};
     let input: &str = include_str!("day_3_input.txt");
-    let n_lines = input.lines().count();
 
-    // necessary size guessed, will crash if it's too little
-    // middle at (GRID_RADIUS, GRID_RADIUS)
-    // with GRID_RADIUS cells to each side
-    let mut wires_on_cell = vec![[0u8; 2*GRID_RADIUS as usize + 1]; 2*GRID_RADIUS as usize + 1];
+    let mut wires_on_cell = HashMap::new();
 
     for (wire_nr, wire) in input.lines().enumerate() {
-        assert!(wire_nr < n_lines);
-        let wire_mask = 1 << wire_nr;
-
-        let mut x = GRID_RADIUS;
-        let mut y = GRID_RADIUS;
+        let mut x: i32 = 0;
+        let mut y: i32 = 0;
         for segment in wire.split(',') {
             let (direction, steps) = segment.split_at(1);
             let n_steps = steps.parse::<u64>().unwrap();
@@ -143,16 +133,18 @@ fn day_3(_part: Part) {
             for _ in 0..n_steps {
                 x += dx;
                 y += dy;
-                wires_on_cell[y as usize][x as usize] |= wire_mask;
+                wires_on_cell
+                    .entry((x, y))
+                    .or_insert_with(HashSet::new)
+                    .insert(wire_nr);
             }
         }
     }
 
-    // inefficient, but simple
-    let distance = wires_on_cell.iter().enumerate()
-        .flat_map(|(y, row)| row.iter().enumerate().map(move |(x, wires)| (x, y, wires.count_ones())))
+    let distance = wires_on_cell.into_iter()
+        .map(|((x, y), wires)| (x, y, wires.len()))
         .filter(|&(_, _, n_wires)| n_wires > 1)
-        .map(|(x, y, _)| (x as i32 - GRID_RADIUS).abs() + (y as i32 - GRID_RADIUS).abs())
+        .map(|(x, y, _)| x.abs() + y.abs())
         .min()
         .unwrap();
     println!("{}", distance);
