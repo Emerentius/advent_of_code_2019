@@ -1,4 +1,5 @@
 use itertools::Itertools;
+use std::collections::VecDeque;
 
 enum Part {
     One = 1,
@@ -52,13 +53,8 @@ const VERB_PTR: usize = 2;
 const DAY_2_PART_2_REQUIRED_OUTPUT: i64 = 19690720;
 
 fn day_2(part: crate::Part) {
-    let input: &str = include_str!("day_2_input.txt");
-    let mut memory = input
-        .trim()
-        .split(',')
-        .map(str::parse::<i64>)
-        .map(Result::<_, _>::unwrap)
-        .collect::<Vec<_>>();
+    let input = include_str!("day_2_input.txt");
+    let mut memory = Program::parse_memory(input);
 
     match part {
         Part::One => {
@@ -86,23 +82,42 @@ fn day_2(part: crate::Part) {
 struct Program {
     memory: Vec<i64>,
     instr_ptr: usize,
+    input: VecDeque<i64>,
+    output: Vec<i64>,
 }
 
 const POSITION_MODE: i64 = 0;
 const IMMEDIATE_MODE: i64 = 1;
 
 impl Program {
-    fn new(memory: Vec<i64>) -> Self {
-        Program {
+    fn new(serialized_memory: &str) -> Self {
+        Self::from_memory(Self::parse_memory(serialized_memory))
+    }
+
+    fn from_memory(memory: Vec<i64>) -> Self {
+        Self {
             memory,
             instr_ptr: 0,
+            input: VecDeque::new(),
+            output: vec![],
         }
+    }
+
+    fn parse_memory(serialized_memory: &str) -> Vec<i64> {
+        serialized_memory
+            .trim()
+            .split(',')
+            .map(str::parse::<i64>)
+            .map(Result::<_, _>::unwrap)
+            .collect()
     }
 
     fn run(&mut self) {
         loop {
             let instruction = self.memory[self.instr_ptr];
             let opcode = instruction % 100;
+
+            let _old_instr_ptr = self.instr_ptr;
             match opcode {
                 // 1 add
                 // 2 multiply
@@ -119,9 +134,22 @@ impl Program {
                     self.memory[result_pos] = op(val1, val2);
                     self.instr_ptr += 4;
                 }
+                // input
+                3 => {
+                    let return_pos = self.return_addr(0);
+                    self.memory[return_pos] = self.input.pop_front().unwrap();
+                    self.instr_ptr += 2;
+                }
+                // output
+                4 => {
+                    self.output.push(self.param_val(0));
+                    self.instr_ptr += 2;
+                }
                 99 => break,
                 _ => unreachable!(),
             }
+
+            assert_ne!(_old_instr_ptr, self.instr_ptr);
         }
     }
 
@@ -152,7 +180,7 @@ impl Program {
 }
 
 fn run_intcode_program(memory: Vec<i64>) -> i64 {
-    let mut program = Program::new(memory);
+    let mut program = Program::from_memory(memory);
     program.run();
     program.memory[0]
 }
@@ -169,7 +197,7 @@ fn day_3(part: Part) {
 
 fn day_3_part_1() {
     use std::collections::{HashMap, HashSet};
-    let input: &str = include_str!("day_3_input.txt");
+    let input = include_str!("day_3_input.txt");
 
     let mut wires_on_cell = HashMap::new();
 
@@ -209,7 +237,7 @@ fn day_3_part_1() {
 
 fn day_3_part_2() {
     use std::collections::HashMap;
-    let input: &str = include_str!("day_3_input.txt");
+    let input = include_str!("day_3_input.txt");
 
     let mut wires_on_cell = HashMap::new();
 
@@ -308,6 +336,23 @@ fn day_4(part: Part) {
     println!("day 4 part {}: nr of passwords in the range fitting the criteria\n{}", part as i32, count)
 }
 
+// ===============================================================================================
+//                                      Day 5
+// ===============================================================================================
+
+fn day_5(_part: Part) {
+    let input = include_str!("day_5_input.txt");
+    let mut program = Program::new(input);
+    program.input = vec![1].into();
+    program.run();
+
+    let mut output = program.output;
+    output.retain(|&code| code != 0);
+    assert_eq!(output.len(), 1);
+    println!("{}", output[0]);
+}
+
+
 fn main() {
     // keep old code in here to avoid unused function warnings
     if false {
@@ -318,6 +363,7 @@ fn main() {
         day_3(Part::One);
         day_3(Part::Two);
         day_4(Part::One);
+        day_4(Part::Two);
     }
-    day_4(Part::Two);
+    day_5(Part::One);
 }
