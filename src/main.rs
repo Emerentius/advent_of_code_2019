@@ -1,8 +1,8 @@
 use itertools::Itertools;
 
 enum Part {
-    One,
-    Two,
+    One = 1,
+    Two = 2,
 }
 
 // ===============================================================================================
@@ -237,14 +237,27 @@ fn two_adjacent_digits_are_equal(&num: &u32) -> bool {
         .any(|(digit1, digit2)| digit1 == digit2)
 }
 
-fn day_4(_part: Part) {
+fn exactly_two_adjacent_digits_are_equal(&num: &u32) -> bool {
+    let grouped_digits = digits(num).group_by(|&digit| digit);
+    grouped_digits
+        .into_iter()
+        .any(|(_, group)| group.count() == 2)
+}
+
+fn day_4(part: Part) {
     // less than a million numbers
     // => easy bruteforce
+    let adjacent_number_filter = match part {
+        Part::One => two_adjacent_digits_are_equal,
+        Part::Two => exactly_two_adjacent_digits_are_equal,
+    };
+
     let count = DAY_4_PASSWORD_RANGE
         .filter(digits_increase_monotonically)
-        .filter(two_adjacent_digits_are_equal)
+        .filter(adjacent_number_filter)
         .count();
-    println!("day 4 part 1: nr of passwords in the range fitting the criteria\n{}", count)
+
+    println!("day 4 part {}: nr of passwords in the range fitting the criteria\n{}", part as i32, count)
 }
 
 fn main() {
@@ -256,6 +269,7 @@ fn main() {
         day_2(Part::Two);
         day_3(Part::One);
         day_3(Part::Two);
+        day_4(Part::One);
     }
-    day_4(Part::One);
+    day_4(Part::Two);
 }
