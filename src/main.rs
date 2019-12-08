@@ -1,3 +1,5 @@
+use itertools::Itertools;
+
 enum Part {
     One,
     Two,
@@ -204,6 +206,47 @@ fn day_3_part_2() {
     println!("day 3 part 2, fewest combined steps the wires must take to reach an intersection:\n{}", distance);
 }
 
+// ===============================================================================================
+//                                      Day 4
+// ===============================================================================================
+
+const DAY_4_PASSWORD_RANGE: std::ops::RangeInclusive<u32> = 273025..=767253;
+
+// from least to most significant
+fn digits(mut num: u32) -> impl Iterator<Item=u32> {
+    std::iter::from_fn(move || {
+        if num != 0 {
+            let digit = num % 10;
+            num /= 10;
+            Some(digit)
+        } else {
+            None
+        }
+    })
+}
+
+fn digits_increase_monotonically(&num: &u32) -> bool {
+    digits(num)
+        .tuple_windows()
+        .all(|(digit, more_significant_digit)| more_significant_digit <= digit)
+}
+
+fn two_adjacent_digits_are_equal(&num: &u32) -> bool {
+    digits(num)
+        .tuple_windows()
+        .any(|(digit1, digit2)| digit1 == digit2)
+}
+
+fn day_4(_part: Part) {
+    // less than a million numbers
+    // => easy bruteforce
+    let count = DAY_4_PASSWORD_RANGE
+        .filter(digits_increase_monotonically)
+        .filter(two_adjacent_digits_are_equal)
+        .count();
+    println!("day 4 part 1: nr of passwords in the range fitting the criteria\n{}", count)
+}
+
 fn main() {
     // keep old code in here to avoid unused function warnings
     if false {
@@ -212,6 +255,7 @@ fn main() {
         day_2(Part::One);
         day_2(Part::Two);
         day_3(Part::One);
+        day_3(Part::Two);
     }
-    day_3(Part::Two);
+    day_4(Part::One);
 }
