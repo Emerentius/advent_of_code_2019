@@ -63,7 +63,7 @@ fn day_2(part: crate::Part) {
             memory[VERB_PTR] = 2;
 
             let result = run_intcode_program(memory);
-            println!("{}", result);
+            println!("day 2 part 1: {}", result);
         }
         Part::Two => {
             let (noun, verb) = (0..100)
@@ -74,7 +74,7 @@ fn day_2(part: crate::Part) {
                     run_intcode_program(memory.clone()) == DAY_2_PART_2_REQUIRED_OUTPUT
                 })
                 .unwrap();
-            println!("{}", noun * 100 + verb);
+            println!("day 2 part 2: {}", noun * 100 + verb);
         }
     }
 }
@@ -112,7 +112,14 @@ impl Program {
             .collect()
     }
 
-    fn run(&mut self) {
+    fn run(serialized_memory: &str, input: impl Into<VecDeque<i64>>) -> Vec<i64> {
+        let mut program = Self::new(serialized_memory);
+        program.input = input.into();
+        program._run();
+        program.output
+    }
+
+    fn _run(&mut self) {
         loop {
             let instruction = self.memory[self.instr_ptr];
             let opcode = instruction % 100;
@@ -144,6 +151,27 @@ impl Program {
                 4 => {
                     self.output.push(self.param_val(0));
                     self.instr_ptr += 2;
+                }
+                // jump-if
+                5 | 6 => {
+                    // 5 jump if true, 6 jump if false
+                    // xor-ing with opcode == 6 conditionally inverts the boolean
+                    // thereby handling both
+                    match (self.param_val(0) != 0) ^ (opcode == 6) {
+                        true => self.instr_ptr = self.param_val(1) as usize,
+                        false => self.instr_ptr += 3,
+                    }
+                }
+                // comparisons
+                7 | 8 => {
+                    let comparator = match opcode {
+                        7 => PartialOrd::lt,
+                        8 => PartialOrd::eq,
+                        _ => unreachable!(),
+                    };
+                    let return_pos = self.return_addr(2);
+                    self.memory[return_pos] = comparator(&self.param_val(0), &self.param_val(1)) as _;
+                    self.instr_ptr += 4;
                 }
                 99 => break,
                 _ => unreachable!(),
@@ -181,7 +209,7 @@ impl Program {
 
 fn run_intcode_program(memory: Vec<i64>) -> i64 {
     let mut program = Program::from_memory(memory);
-    program.run();
+    program._run();
     program.memory[0]
 }
 
@@ -340,16 +368,84 @@ fn day_4(part: Part) {
 //                                      Day 5
 // ===============================================================================================
 
-fn day_5(_part: Part) {
-    let input = include_str!("day_5_input.txt");
-    let mut program = Program::new(input);
-    program.input = vec![1].into();
-    program.run();
+fn day_5(part: Part) {
+    let puzzle_input = include_str!("day_5_input.txt");
+    let input = match part {
+        Part::One => 1,
+        Part::Two => 5,
+    };
+    let mut output = Program::run(puzzle_input, vec![input]);
 
-    let mut output = program.output;
     output.retain(|&code| code != 0);
     assert_eq!(output.len(), 1);
     println!("{}", output[0]);
+}
+
+#[test]
+fn day_5_input_ouput() {
+    for i in 0..10 {
+        let output = Program::run(
+            "3,0,4,0,99",
+            vec![i],
+        );
+        assert_eq!(i, output[0]);
+    }
+}
+
+
+#[test]
+fn day_5_position_mode_equal_to_8() {
+    for i in 5..12 {
+        let output = Program::run(
+            "3,9,8,9,10,9,4,9,99,-1,8",
+            vec![i],
+        );
+        assert_eq!(output, vec![(i == 8) as _]);
+    }
+}
+#[test]
+fn day_5_immediate_mode_equal_to_8() {
+    for i in 5..12 {
+        let output = Program::run(
+            "3,3,1108,-1,8,3,4,3,99",
+            vec![i],
+        );
+        assert_eq!(output, vec![(i == 8) as _]);
+    }
+}
+
+#[test]
+fn day_5_jump_test_position_mode() {
+    for i in -5..5 {
+        let output = Program::run(
+            "3,12,6,12,15,1,13,14,13,4,13,99,-1,0,1,9",
+            vec![i],
+        );
+        assert_eq!(output, vec![(i != 0) as _]);
+    }
+
+}
+
+#[test]
+fn day_5_jump_test_immediate_mode() {
+    for i in -5..5 {
+        let output = Program::run(
+            "3,3,1105,-1,9,1101,0,0,12,4,12,99,1",
+            vec![i],
+        );
+        assert_eq!(output, vec![(i != 0) as _]);
+    }
+
+}
+
+#[test]
+fn day_5_larger_example() {
+    let puzzle_input = "3,21,1008,21,8,20,1005,20,22,107,8,21,20,1006,20,31,1106,0,36,98,0,0,1002,21,125,20,4,20,1105,1,46,104,999,1105,1,46,1101,1000,1,20,4,20,1105,1,46,98,99";
+
+    for input in 5..12 {
+        let output = Program::run(puzzle_input, vec![input]);
+        assert_eq!(output[0], 1000 - 8.cmp(&input) as i64)
+    }
 }
 
 
@@ -364,6 +460,7 @@ fn main() {
         day_3(Part::Two);
         day_4(Part::One);
         day_4(Part::Two);
+        day_5(Part::One);
     }
-    day_5(Part::One);
+    day_5(Part::Two);
 }
