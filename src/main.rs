@@ -110,7 +110,14 @@ fn run_intcode_program(mut memory: Vec<i64>) -> i64 {
 // ===============================================================================================
 //                                      Day 3
 // ===============================================================================================
-fn day_3(_part: Part) {
+fn day_3(part: Part) {
+    match part {
+        Part::One => day_3_part_1(),
+        Part::Two => day_3_part_2(),
+    }
+}
+
+fn day_3_part_1() {
     use std::collections::{HashMap, HashSet};
     let input: &str = include_str!("day_3_input.txt");
 
@@ -150,6 +157,53 @@ fn day_3(_part: Part) {
     println!("{}", distance);
 }
 
+fn day_3_part_2() {
+    use std::collections::HashMap;
+    let input: &str = include_str!("day_3_input.txt");
+
+    let mut wires_on_cell = HashMap::new();
+
+    for (wire_nr, wire) in input.lines().enumerate() {
+        let mut x: i32 = 0;
+        let mut y: i32 = 0;
+
+        let mut distance_traveled: u32 = 0;
+        for segment in wire.split(',') {
+            let (direction, steps) = segment.split_at(1);
+            let n_steps = steps.parse::<u64>().unwrap();
+            let (dx, dy) = match direction {
+                "R" => (1, 0),
+                "L" => (-1, 0),
+                "U" => (0, 1),
+                "D" => (0, -1),
+                _ => unreachable!(),
+            };
+
+            for _ in 0..n_steps {
+                x += dx;
+                y += dy;
+                distance_traveled += 1;
+
+                // Store distance traveled, but only the first time we
+                // visit this cell to keep the minimum distance.
+                wires_on_cell
+                    .entry((x, y))
+                    .or_insert_with(HashMap::new)
+                    .entry(wire_nr)
+                    .or_insert(distance_traveled);
+            }
+        }
+    }
+
+    let distance: u32 = wires_on_cell.into_iter()
+        .map(|(_, wire_distances)| wire_distances)
+        .filter(|wire_distances| wire_distances.len() > 1)
+        .map(|wire_distances| wire_distances.values().sum())
+        .min()
+        .unwrap();
+    println!("day 3 part 2, fewest combined steps the wires must take to reach an intersection:\n{}", distance);
+}
+
 fn main() {
     // keep old code in here to avoid unused function warnings
     if false {
@@ -157,7 +211,7 @@ fn main() {
         day_1(Part::Two);
         day_2(Part::One);
         day_2(Part::Two);
+        day_3(Part::One);
     }
-
-    day_3(Part::One);
+    day_3(Part::Two);
 }
