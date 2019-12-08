@@ -41,7 +41,52 @@ fn fuel_required() {
     }
 }
 
+// ===============================================================================================
+//                                      Day 2
+// ===============================================================================================
+
+fn day_2(_part: crate::Part) {
+    let input: &str = include_str!("day_2_input.txt");
+    let mut memory = input
+        .trim()
+        .split(',')
+        .map(str::parse::<i64>)
+        .map(Result::<_, _>::unwrap)
+        .collect::<Vec<_>>();
+    let mut pos = 0;
+
+    // >before running the program, replace position 1 with the value 12 and replace position 2 with the value 2
+    memory[1] = 12;
+    memory[2] = 2;
+
+    loop {
+        let opcode = memory[pos];
+        match opcode {
+            1 | 2 => {
+                if let &[pos1, pos2, result_pos] = &memory[pos + 1..pos + 4] {
+                    let op = if opcode == 1 {
+                        std::ops::Add::add
+                    } else {
+                        std::ops::Mul::mul
+                    };
+                    memory[result_pos as usize] = op(memory[pos1 as usize], memory[pos2 as usize]);
+                } else {
+                    unreachable!();
+                }
+                pos += 4;
+            }
+            99 => break,
+            _ => unreachable!(),
+        }
+    }
+    println!("{}", memory[0]);
+}
+
 fn main() {
-    day_1(Part::One);
-    day_1(Part::Two);
+    if false {
+        day_1(Part::One);
+        day_1(Part::Two);
+    }
+
+    day_2(Part::One);
 }
