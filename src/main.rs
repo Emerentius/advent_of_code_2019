@@ -83,30 +83,78 @@ fn day_2(part: crate::Part) {
     }
 }
 
-fn run_intcode_program(mut memory: Vec<i64>) -> i64 {
-    // instruction pointer
-    let mut instr_ptr = 0;
-    loop {
-        let opcode = memory[instr_ptr];
-        match opcode {
-            1 | 2 => {
-                if let &[pos1, pos2, result_pos] = &memory[instr_ptr + 1..instr_ptr + 4] {
+struct Program {
+    memory: Vec<i64>,
+    instr_ptr: usize,
+}
+
+const POSITION_MODE: i64 = 0;
+const IMMEDIATE_MODE: i64 = 1;
+
+impl Program {
+    fn new(memory: Vec<i64>) -> Self {
+        Program {
+            memory,
+            instr_ptr: 0,
+        }
+    }
+
+    fn run(&mut self) {
+        loop {
+            let instruction = self.memory[self.instr_ptr];
+            let opcode = instruction % 100;
+            match opcode {
+                // 1 add
+                // 2 multiply
+                1 | 2 => {
                     let op = if opcode == 1 {
                         std::ops::Add::add
                     } else {
                         std::ops::Mul::mul
                     };
-                    memory[result_pos as usize] = op(memory[pos1 as usize], memory[pos2 as usize]);
-                } else {
-                    unreachable!();
+                    let val1 = self.param_val(0);
+                    let val2 = self.param_val(1);
+                    let result_pos = self.return_addr(2);
+
+                    self.memory[result_pos] = op(val1, val2);
+                    self.instr_ptr += 4;
                 }
-                instr_ptr += 4;
+                99 => break,
+                _ => unreachable!(),
             }
-            99 => break,
-            _ => unreachable!(),
         }
     }
-    memory[0]
+
+    fn param_val(&self, param_nr: u32) -> i64 {
+        let param_modes = self.memory[self.instr_ptr] / 100;
+        let param_mode = param_modes / 10i64.pow(param_nr) % 10;
+        self._param_val(param_nr, param_mode)
+    }
+
+    fn _param_val(&self, param_nr: u32, param_mode: i64) -> i64 {
+        let param_offset = param_nr as usize + 1;
+        let address = match param_mode {
+            POSITION_MODE => self.memory[self._param_idx(param_offset)] as usize,
+            IMMEDIATE_MODE => self._param_idx(param_offset),
+            _ => unreachable!(),
+        };
+        self.memory[address]
+    }
+
+    fn return_addr(&self, param_nr: u32) -> usize {
+        // resolution will be done by caller when assigning to it
+        self._param_val(param_nr, IMMEDIATE_MODE) as usize
+    }
+
+    fn _param_idx(&self, param_nr: usize) -> usize {
+        self.instr_ptr + param_nr
+    }
+}
+
+fn run_intcode_program(memory: Vec<i64>) -> i64 {
+    let mut program = Program::new(memory);
+    program.run();
+    program.memory[0]
 }
 
 // ===============================================================================================
