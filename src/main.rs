@@ -53,17 +53,18 @@ fn day_2(_part: crate::Part) {
         .map(str::parse::<i64>)
         .map(Result::<_, _>::unwrap)
         .collect::<Vec<_>>();
-    let mut pos = 0;
+    // instruction pointer
+    let mut instr_ptr = 0;
 
     // >before running the program, replace position 1 with the value 12 and replace position 2 with the value 2
-    memory[1] = 12;
-    memory[2] = 2;
+    memory[1] = 12; // noun
+    memory[2] = 2; // verb
 
     loop {
-        let opcode = memory[pos];
+        let opcode = memory[instr_ptr];
         match opcode {
             1 | 2 => {
-                if let &[pos1, pos2, result_pos] = &memory[pos + 1..pos + 4] {
+                if let &[pos1, pos2, result_pos] = &memory[instr_ptr + 1..instr_ptr + 4] {
                     let op = if opcode == 1 {
                         std::ops::Add::add
                     } else {
@@ -73,7 +74,7 @@ fn day_2(_part: crate::Part) {
                 } else {
                     unreachable!();
                 }
-                pos += 4;
+                instr_ptr += 4;
             }
             99 => break,
             _ => unreachable!(),
