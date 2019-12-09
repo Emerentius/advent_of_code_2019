@@ -1,6 +1,8 @@
 use itertools::Itertools;
 use std::collections::VecDeque;
 use std::collections::HashMap;
+use std::collections::HashSet;
+use std::collections::BinaryHeap;
 
 enum Part {
     One = 1,
@@ -454,7 +456,7 @@ fn day_5_larger_example() {
 //                                      Day 6
 // ===============================================================================================
 
-fn day_6(_part: Part) {
+fn day_6(part: Part) {
     // store x orbits y
     // or y is orbited by x?
     // different performance tradeoffs, but can't tell from this small example
@@ -462,15 +464,65 @@ fn day_6(_part: Part) {
     // orbited-by relations make computing the checksum cheaper, so I went for that
     let input = include_str!("day_6_input.txt");
 
-    let mut orbiters_of = HashMap::new();
+    let orbited_orbiter_pairs = input.lines()
+        .map(|line| {
+            let (orbited, orbiter) = line.split_at(line.find(')').expect(""));
+            let orbiter = &orbiter[1..]; // remove the ')'
+            (orbited, orbiter)
+        });
 
-    for line in input.lines() {
-        let (orbited, orbiter) = line.split_at(line.find(')').expect(""));
-        let orbiter = &orbiter[1..]; // remove the ')'
-        orbiters_of.entry(orbited).or_insert(vec![]).push(orbiter);
+    match part {
+        Part::One => {
+            let mut orbiters_of = HashMap::new();
+            for (orbited, orbiter) in orbited_orbiter_pairs {
+                orbiters_of.entry(orbited).or_insert(vec![]).push(orbiter);
+            }
+            println!("day 6 part 1: {}", orbital_checksum(&orbiters_of));
+        }
+        Part::Two => {
+            let mut santas_orbit = "";
+            let mut my_orbit = "";
+            let mut orbit_neighbors = HashMap::new();
+
+            // construct graph and find start and endpoint
+            for (orbited, orbiter) in orbited_orbiter_pairs {
+                // only need these two, no need to store the rest
+                if orbiter == "YOU" {
+                    my_orbit = orbited;
+                }
+                if orbiter == "SAN" {
+                    santas_orbit = orbited;
+                }
+
+                orbit_neighbors.entry(orbited).or_insert(vec![]).push(orbiter);
+                orbit_neighbors.entry(orbiter).or_insert(vec![]).push(orbited);
+            }
+
+            // dijkstra
+            let mut orbited_by_distance_to_my_orbit = BinaryHeap::new();
+            let mut seen_already = HashSet::new();
+
+            let mut add_orbits = |heap: &mut BinaryHeap<_>, orbit, distance| {
+                for &orbit in orbit_neighbors[orbit].iter() {
+                    let is_new = seen_already.insert(orbit);
+                    if is_new {
+                        heap.push((distance + 1, orbit));
+                    }
+                }
+            };
+            add_orbits(&mut orbited_by_distance_to_my_orbit, my_orbit, 0);
+
+            let distance = loop {
+                let (distance, next_closest_orbit) = orbited_by_distance_to_my_orbit.pop().unwrap();
+                if next_closest_orbit == santas_orbit {
+                    break distance;
+                }
+                add_orbits(&mut orbited_by_distance_to_my_orbit, next_closest_orbit, distance);
+
+            };
+            println!("day 6 part 2: {}", distance);
+        }
     }
-
-    println!("{}", orbital_checksum(&orbiters_of));
 }
 
 fn orbital_checksum(orbiters_of: &HashMap<&str, Vec<&str>>) -> u32 {
@@ -502,6 +554,7 @@ fn main() {
         day_4(Part::Two);
         day_5(Part::One);
         day_5(Part::Two);
+        day_6(Part::One);
     }
-    day_6(Part::One);
+    day_6(Part::Two);
 }
