@@ -1,5 +1,6 @@
 use itertools::Itertools;
 use std::collections::VecDeque;
+use std::collections::HashMap;
 
 enum Part {
     One = 1,
@@ -449,6 +450,45 @@ fn day_5_larger_example() {
 }
 
 
+// ===============================================================================================
+//                                      Day 6
+// ===============================================================================================
+
+fn day_6(_part: Part) {
+    // store x orbits y
+    // or y is orbited by x?
+    // different performance tradeoffs, but can't tell from this small example
+    // what's necessary.
+    // orbited-by relations make computing the checksum cheaper, so I went for that
+    let input = include_str!("day_6_input.txt");
+
+    let mut orbiters_of = HashMap::new();
+
+    for line in input.lines() {
+        let (orbited, orbiter) = line.split_at(line.find(')').expect(""));
+        let orbiter = &orbiter[1..]; // remove the ')'
+        orbiters_of.entry(orbited).or_insert(vec![]).push(orbiter);
+    }
+
+    println!("{}", orbital_checksum(&orbiters_of));
+}
+
+fn orbital_checksum(orbiters_of: &HashMap<&str, Vec<&str>>) -> u32 {
+    _orbital_checksum("COM", 0, &orbiters_of)
+}
+
+// recursing function
+// the total number of orbits for an n-long chain is the nth triangle number
+fn _orbital_checksum(orbiter: &str, depth: u32, orbiters_of: &HashMap<&str, Vec<&str>>) -> u32 {
+    depth + orbiters_of.get(orbiter)
+        .map_or(0, |orbiters|
+            orbiters
+                .iter()
+                .map(|orbiter| _orbital_checksum(orbiter, depth + 1, orbiters_of))
+                .sum::<u32>()
+        )
+}
+
 fn main() {
     // keep old code in here to avoid unused function warnings
     if false {
@@ -461,6 +501,7 @@ fn main() {
         day_4(Part::One);
         day_4(Part::Two);
         day_5(Part::One);
+        day_5(Part::Two);
     }
-    day_5(Part::Two);
+    day_6(Part::One);
 }
