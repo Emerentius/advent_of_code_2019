@@ -82,6 +82,7 @@ fn day_2(part: crate::Part) {
     }
 }
 
+#[derive(Clone)]
 struct Program {
     memory: Vec<i64>,
     instr_ptr: usize,
@@ -115,14 +116,14 @@ impl Program {
             .collect()
     }
 
-    fn run(serialized_memory: &str, input: impl Into<VecDeque<i64>>) -> Vec<i64> {
+    fn execute(serialized_memory: &str, input: impl Into<VecDeque<i64>>) -> Vec<i64> {
         let mut program = Self::new(serialized_memory);
         program.input = input.into();
-        program._run();
+        program.run();
         program.output
     }
 
-    fn _run(&mut self) {
+    fn run(&mut self) {
         loop {
             let instruction = self.memory[self.instr_ptr];
             let opcode = instruction % 100;
@@ -212,7 +213,7 @@ impl Program {
 
 fn run_intcode_program(memory: Vec<i64>) -> i64 {
     let mut program = Program::from_memory(memory);
-    program._run();
+    program.run();
     program.memory[0]
 }
 
@@ -227,7 +228,6 @@ fn day_3(part: Part) {
 }
 
 fn day_3_part_1() {
-    use std::collections::{HashMap, HashSet};
     let input = include_str!("day_3_input.txt");
 
     let mut wires_on_cell = HashMap::new();
@@ -267,7 +267,6 @@ fn day_3_part_1() {
 }
 
 fn day_3_part_2() {
-    use std::collections::HashMap;
     let input = include_str!("day_3_input.txt");
 
     let mut wires_on_cell = HashMap::new();
@@ -377,7 +376,7 @@ fn day_5(part: Part) {
         Part::One => 1,
         Part::Two => 5,
     };
-    let mut output = Program::run(puzzle_input, vec![input]);
+    let mut output = Program::execute(puzzle_input, vec![input]);
 
     output.retain(|&code| code != 0);
     assert_eq!(output.len(), 1);
@@ -387,7 +386,7 @@ fn day_5(part: Part) {
 #[test]
 fn day_5_input_ouput() {
     for i in 0..10 {
-        let output = Program::run(
+        let output = Program::execute(
             "3,0,4,0,99",
             vec![i],
         );
@@ -399,7 +398,7 @@ fn day_5_input_ouput() {
 #[test]
 fn day_5_position_mode_equal_to_8() {
     for i in 5..12 {
-        let output = Program::run(
+        let output = Program::execute(
             "3,9,8,9,10,9,4,9,99,-1,8",
             vec![i],
         );
@@ -409,7 +408,7 @@ fn day_5_position_mode_equal_to_8() {
 #[test]
 fn day_5_immediate_mode_equal_to_8() {
     for i in 5..12 {
-        let output = Program::run(
+        let output = Program::execute(
             "3,3,1108,-1,8,3,4,3,99",
             vec![i],
         );
@@ -420,7 +419,7 @@ fn day_5_immediate_mode_equal_to_8() {
 #[test]
 fn day_5_jump_test_position_mode() {
     for i in -5..5 {
-        let output = Program::run(
+        let output = Program::execute(
             "3,12,6,12,15,1,13,14,13,4,13,99,-1,0,1,9",
             vec![i],
         );
@@ -432,7 +431,7 @@ fn day_5_jump_test_position_mode() {
 #[test]
 fn day_5_jump_test_immediate_mode() {
     for i in -5..5 {
-        let output = Program::run(
+        let output = Program::execute(
             "3,3,1105,-1,9,1101,0,0,12,4,12,99,1",
             vec![i],
         );
@@ -446,7 +445,7 @@ fn day_5_larger_example() {
     let puzzle_input = "3,21,1008,21,8,20,1005,20,22,107,8,21,20,1006,20,31,1106,0,36,98,0,0,1002,21,125,20,4,20,1105,1,46,104,999,1105,1,46,1101,1000,1,20,4,20,1105,1,46,98,99";
 
     for input in 5..12 {
-        let output = Program::run(puzzle_input, vec![input]);
+        let output = Program::execute(puzzle_input, vec![input]);
         assert_eq!(output[0], 1000 - 8.cmp(&input) as i64)
     }
 }
@@ -525,6 +524,35 @@ fn day_6(part: Part) {
     }
 }
 
+// ===============================================================================================
+//                                      Day 7
+// ===============================================================================================
+
+fn day_7(part: Part) {
+    // use this trait to generate all permutations
+    use permutohedron::LexicalPermutation;
+    let program = Program::new(include_str!("day_7_input.txt"));
+
+    // 5! = 120 permutations
+    // trivial to bruteforce
+    let mut phases = [0, 1, 2, 3, 4];
+
+    let max_output = (0..120).map(|_| {
+            let output = phases.iter().fold(0, |input, &phase| {
+                let mut program = program.clone();
+                program.input = vec![phase, input].into();
+                program.run();
+                program.output[0]
+            });
+            phases.next_permutation();
+            output
+        })
+        .max()
+        .unwrap();
+
+    println!("{}", max_output);
+}
+
 fn orbital_checksum(orbiters_of: &HashMap<&str, Vec<&str>>) -> u32 {
     _orbital_checksum("COM", 0, &orbiters_of)
 }
@@ -555,6 +583,7 @@ fn main() {
         day_5(Part::One);
         day_5(Part::Two);
         day_6(Part::One);
+        day_6(Part::Two);
     }
-    day_6(Part::Two);
+    day_7(Part::One);
 }
