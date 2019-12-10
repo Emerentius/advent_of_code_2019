@@ -617,6 +617,10 @@ fn _orbital_checksum(orbiter: &str, depth: u32, orbiters_of: &HashMap<&str, Vec<
 //                                      Day 8
 // ===============================================================================================
 
+// const PIXEL_OFF: u8 = 0;
+const PIXEL_ON: u8 = 1;
+const PIXEL_TRANSPARENT: u8 = 2;
+
 fn day_8(part: Part) {
     let input = include_str!("day_8_input.txt");
     const WIDTH: usize = 25;
@@ -637,13 +641,42 @@ fn day_8(part: Part) {
 
     assert!(layers.last().map_or(false, |layer| layer.len() == N_PIXELS_PER_LAYER));
 
-    let count_digit = |layer: &Vec<_>, digit: u8| layer.iter().filter(|&&dig| dig == digit).count();
-    let fewest_0_layer = layers.iter()
-        .min_by_key(|layer| count_digit(layer, 0))
-        .unwrap();
+    match part {
+        Part::One => {
+            let count_digit = |layer: &Vec<_>, digit: u8| layer.iter().filter(|&&dig| dig == digit).count();
+            let fewest_0_layer = layers.iter()
+                .min_by_key(|layer| count_digit(layer, 0))
+                .unwrap();
 
-    let solution = count_digit(fewest_0_layer, 1) * count_digit(fewest_0_layer, 2);
-    println!("day 8 part 1: {}", solution);
+            let solution = count_digit(fewest_0_layer, 1) * count_digit(fewest_0_layer, 2);
+            println!("day 8 part 1: {}", solution);
+        }
+        Part::Two => {
+            let image = layers
+                .into_iter()
+                .fold1(|mut upper_layer, lower_layer| {
+                    upper_layer.iter_mut().zip(lower_layer)
+                        .filter(|(&mut upper_cell, _)| upper_cell == PIXEL_TRANSPARENT)
+                        .for_each(|(upper_cell, lower_cell)| *upper_cell = lower_cell);
+                    upper_layer
+                })
+                .unwrap();
+
+            let row_of_pixel = |n_pixel| n_pixel / WIDTH;
+            let rows = image
+                .into_iter()
+                .enumerate()
+                .group_by(|&(n_pixel, _color)| row_of_pixel(n_pixel));
+
+            println!("day 8 part 2:");
+            for (_, row) in rows.into_iter() {
+                for (_, value) in row {
+                    print!("{0}{0}", if value == PIXEL_ON { '█' } else { ' ' });
+                }
+                println!();
+            }
+        }
+    }
 }
 
 fn main() {
@@ -663,6 +696,7 @@ fn main() {
         day_6(Part::Two);
         day_7(Part::One);
         day_7(Part::Two);
+        day_8(Part::One);
     }
-    day_8(Part::One);
+    day_8(Part::Two);
 }
