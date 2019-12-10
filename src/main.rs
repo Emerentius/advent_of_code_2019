@@ -612,6 +612,40 @@ fn _orbital_checksum(orbiter: &str, depth: u32, orbiters_of: &HashMap<&str, Vec<
         )
 }
 
+
+// ===============================================================================================
+//                                      Day 8
+// ===============================================================================================
+
+fn day_8(part: Part) {
+    let input = include_str!("day_8_input.txt");
+    const WIDTH: usize = 25;
+    const HEIGHT: usize = 6;
+    const N_PIXELS_PER_LAYER: usize = WIDTH * HEIGHT;
+
+    let layers: Vec<Vec<_>> = input
+        .trim()
+        .as_bytes()
+        .chunks(N_PIXELS_PER_LAYER)
+        .map(|chunk| {
+            let mut chunk = chunk.to_vec();
+            // convert ascii to integers, assuming valid input
+            chunk.iter_mut().for_each(|num| *num -= b'0');
+            chunk
+        })
+        .collect();
+
+    assert!(layers.last().map_or(false, |layer| layer.len() == N_PIXELS_PER_LAYER));
+
+    let count_digit = |layer: &Vec<_>, digit: u8| layer.iter().filter(|&&dig| dig == digit).count();
+    let fewest_0_layer = layers.iter()
+        .min_by_key(|layer| count_digit(layer, 0))
+        .unwrap();
+
+    let solution = count_digit(fewest_0_layer, 1) * count_digit(fewest_0_layer, 2);
+    println!("day 8 part 1: {}", solution);
+}
+
 fn main() {
     // keep old code in here to avoid unused function warnings
     if false {
@@ -628,6 +662,7 @@ fn main() {
         day_6(Part::One);
         day_6(Part::Two);
         day_7(Part::One);
+        day_7(Part::Two);
     }
-    day_7(Part::Two);
+    day_8(Part::One);
 }
