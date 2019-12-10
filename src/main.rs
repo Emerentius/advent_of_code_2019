@@ -9,6 +9,12 @@ enum Part {
     Two = 2,
 }
 
+#[derive(PartialEq)]
+enum ProgramState {
+    RequiresInput,
+    Finished,
+}
+
 // ===============================================================================================
 //                                      Day 1
 // ===============================================================================================
@@ -123,7 +129,7 @@ impl Program {
         program.output
     }
 
-    fn run(&mut self) {
+    fn run(&mut self) -> ProgramState {
         loop {
             let instruction = self.memory[self.instr_ptr];
             let opcode = instruction % 100;
@@ -148,7 +154,10 @@ impl Program {
                 // input
                 3 => {
                     let return_pos = self.return_addr(0);
-                    self.memory[return_pos] = self.input.pop_front().unwrap();
+                    match self.input.pop_front() {
+                        Some(value) => self.memory[return_pos] = value,
+                        None => return ProgramState::RequiresInput,
+                    };
                     self.instr_ptr += 2;
                 }
                 // output
@@ -183,6 +192,7 @@ impl Program {
 
             assert_ne!(_old_instr_ptr, self.instr_ptr);
         }
+        ProgramState::Finished
     }
 
     fn param_val(&self, param_nr: u32) -> i64 {
@@ -535,22 +545,55 @@ fn day_7(part: Part) {
 
     // 5! = 120 permutations
     // trivial to bruteforce
-    let mut phases = [0, 1, 2, 3, 4];
+    match part {
+        Part::One => {
+            let mut phases = [0, 1, 2, 3, 4];
 
-    let max_output = (0..120).map(|_| {
-            let output = phases.iter().fold(0, |input, &phase| {
-                let mut program = program.clone();
-                program.input = vec![phase, input].into();
-                program.run();
-                program.output[0]
-            });
-            phases.next_permutation();
-            output
-        })
-        .max()
-        .unwrap();
+            let max_output = (0..120).map(|_| {
+                    let output = phases.iter().fold(0, |input, &phase| {
+                        let mut program = program.clone();
+                        program.input = vec![phase, input].into();
+                        program.run();
+                        program.output[0]
+                    });
+                    phases.next_permutation();
+                    output
+                })
+                .max()
+                .unwrap();
 
-    println!("{}", max_output);
+            println!("{}", max_output);
+        }
+        Part::Two => {
+            let mut phases = [5, 6, 7, 8, 9];
+
+            let mut max_output = 0;
+            for _ in 0..120 {
+                let mut programs = [program.clone(), program.clone(), program.clone(), program.clone(), program.clone()];
+                for (&phase, program) in phases.iter().zip(programs.iter_mut()) {
+                    program.input.push_back(phase);
+                }
+                //programs[0].input.push_back(0);
+
+                let mut input_output = 0;
+                loop {
+                    let mut is_final_iteration = false;
+                    for program in programs.iter_mut() {
+                        program.input.push_back(input_output);
+                        is_final_iteration |= program.run() == ProgramState::Finished;
+                        input_output = program.output.pop().unwrap();
+                    }
+                    if is_final_iteration {
+                        break;
+                    }
+                }
+                max_output = std::cmp::max(max_output, input_output);
+                phases.next_permutation();
+            }
+
+            println!("day 7 part 2: {}", max_output);
+        }
+    }
 }
 
 fn orbital_checksum(orbiters_of: &HashMap<&str, Vec<&str>>) -> u32 {
@@ -584,6 +627,7 @@ fn main() {
         day_5(Part::Two);
         day_6(Part::One);
         day_6(Part::Two);
+        day_7(Part::One);
     }
-    day_7(Part::One);
+    day_7(Part::Two);
 }
