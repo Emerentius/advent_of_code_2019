@@ -5,6 +5,7 @@ use std::collections::HashSet;
 use std::collections::BinaryHeap;
 use std::convert::TryInto;
 
+#[derive(Copy, Clone)]
 enum Part {
     One = 1,
     Two = 2,
@@ -149,6 +150,7 @@ impl Program {
         program.output
     }
 
+    #[allow(unused)]
     fn debug_execute(serialized_memory: &str, input: impl Into<VecDeque<i64>>) -> Self {
         let mut program = Self::new(serialized_memory);
         program.input = input.into();
@@ -720,11 +722,11 @@ fn day_8(part: Part) {
 //                                      Day 8
 // ===============================================================================================
 
-fn day_9(_part: Part) {
+fn day_9(part: Part) {
     let input = include_str!("day_9_input.txt");
-    let output = Program::execute(input, vec![1]);
+    let output = Program::execute(input, vec![part as i64]);
     assert_eq!(output.len(), 1);
-    println!("day 9 part 1: {}", output[0]);
+    println!("day 9 part {}: {}", part as i64, output[0]);
 }
 
 #[test]
@@ -775,6 +777,7 @@ fn main() {
         day_7(Part::Two);
         day_8(Part::One);
         day_8(Part::Two);
+        day_9(Part::One);
     }
-    day_9(Part::One);
+    day_9(Part::Two);
 }
