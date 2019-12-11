@@ -1,3 +1,7 @@
+
+#![feature(test)]
+extern crate test;
+
 use itertools::Itertools;
 use std::collections::VecDeque;
 use std::collections::HashMap;
@@ -764,15 +768,15 @@ fn day_9_output_large_number_as_is() {
 // ===============================================================================================
 
 // Angle stored as a 2D vector with minimized integer coefficients.
-#[derive(Copy, Clone, PartialEq, PartialOrd, Ord, Eq, Debug)]
+#[derive(Copy, Clone, PartialEq, PartialOrd, Ord, Eq, Debug, Hash)]
 struct Vec2D {
-    x: i64,
-    y: i64,
+    x: i16,
+    y: i16,
 }
 
 impl Vec2D {
     // x == y == 0 is forbidden
-    fn reduced(x: i64, y: i64) -> Self {
+    fn reduced(x: i16, y: i16) -> Self {
         let gcd = num::integer::gcd(x, y);
         Vec2D {
             x: x / gcd,
@@ -780,7 +784,7 @@ impl Vec2D {
         }
     }
 
-    fn from_tuple((x, y): (i64, i64)) -> Self {
+    fn from_tuple((x, y): (i16, i16)) -> Self {
         Vec2D { x, y }
     }
 }
@@ -806,18 +810,20 @@ fn day_10(part: Part) {
         .map(|ch| ch == '#')
         .collect();
 
-    let width = input.lines().next().unwrap().len() as i64;
+    let width = input.lines().next().unwrap().len() as i16;
     let height = input.lines().count();
 
     let idx = |x, y| usize::try_from(y * width + x).unwrap();
 
-    let all_positions = (0..width as i64)
-        .flat_map(|x| (0..height as i64).map(move |y| (x, y)));
-    let asteroid_positions = all_positions.filter(|&(x, y)| asteroid_grid[idx(x,y)]);
+    let all_positions = (0..width as i16)
+        .flat_map(|x| (0..height as i16).map(move |y| (x, y)));
+    let asteroid_positions = all_positions.filter(|&(x, y)| asteroid_grid[idx(x,y)])
+        .collect::<Vec<_>>();
 
     let (n_asteroids, best_position) = asteroid_positions
-        .clone()
-        .map(|pos| (n_asteroids_visible_from_pos(pos, asteroid_positions.clone()), pos))
+        .iter()
+        .copied()
+        .map(|pos| (n_asteroids_visible_from_pos(pos, asteroid_positions.iter().copied()), pos))
         .max()
         .unwrap();
 
@@ -827,7 +833,7 @@ fn day_10(part: Part) {
         }
         Part::Two => {
             // there are more asteroids than 200 so I can safely ignore multiple rotations
-            let angles = angles_with_asteroids_visible(best_position, asteroid_positions);
+            let angles = angles_with_asteroids_visible(best_position, asteroid_positions.iter().copied());
             // and their angles
             let mut visible_asteroids = angles
                 .into_iter()
@@ -851,24 +857,24 @@ fn day_10(part: Part) {
     }
 }
 
-fn n_asteroids_visible_from_pos(pos: (i64, i64), asteroid_positions: impl Iterator<Item = (i64, i64)>) -> usize {
+fn n_asteroids_visible_from_pos(pos: (i16, i16), asteroid_positions: impl Iterator<Item = (i16, i16)>) -> usize {
     angles_with_asteroids_visible(pos, asteroid_positions).len()
 }
 
-fn angles_with_asteroids_visible(pos: (i64, i64), asteroid_positions: impl Iterator<Item = (i64, i64)>) -> BTreeSet<Vec2D> {
+fn angles_with_asteroids_visible(pos: (i16, i16), asteroid_positions: impl Iterator<Item = (i16, i16)>) -> HashSet<Vec2D> {
     let (x, y) = pos;
     asteroid_positions
         .filter(|&other_pos| pos != other_pos)
         .map(|(x_ast, y_ast)| Vec2D::reduced(x_ast - x, y_ast - y))
-        .collect::<BTreeSet<_>>()
+        .collect::<HashSet<_>>()
 }
 
 // only use with angles from `angles_with_asteroids_visible`
 // or it will panic
 fn closest_visible_asteroid_in_direction(
     asteroid_grid: &[bool],
-    width: i64,
-    pos: (i64, i64),
+    width: i16,
+    pos: (i16, i16),
     angle: Vec2D,
 ) -> Vec2D {
     let pos = Vec2D::from_tuple(pos);
@@ -881,8 +887,8 @@ fn closest_visible_asteroid_in_direction(
 // code for printing asteroid grid with amount of visible asteroids
 // marked
 //
-// for y in 0..height as i64 {
-//     for x in 0..width as i64 {
+// for y in 0..height as i16 {
+//     for x in 0..width as i16 {
 //         if asteroid_grid[idx(x, y)] {
 //             print!("{}", n_asteroids_visible_from_pos((x, y), asteroid_positions.clone()));
 //         } else {
@@ -891,6 +897,15 @@ fn closest_visible_asteroid_in_direction(
 //     }
 //     println!();
 // }
+#[bench]
+fn day_10_part1(b: &mut test::Bencher) {
+    b.iter(|| day_10(Part::One));
+}
+
+#[bench]
+fn day_10_part2(b: &mut test::Bencher) {
+    b.iter(|| day_10(Part::Two));
+}
 
 fn main() {
     // keep old code in here to avoid unused function warnings
