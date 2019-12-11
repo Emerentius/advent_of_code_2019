@@ -3,6 +3,7 @@ use std::collections::VecDeque;
 use std::collections::HashMap;
 use std::collections::HashSet;
 use std::collections::BinaryHeap;
+use std::convert::TryInto;
 
 enum Part {
     One = 1,
@@ -88,28 +89,47 @@ fn day_2(part: crate::Part) {
     }
 }
 
+/// IntCode program
 #[derive(Clone)]
 struct Program {
     memory: Vec<i64>,
     instr_ptr: usize,
+    // parameters in relative position mode access memory
+    // at position relative_base + value
+    relative_base: usize,
     input: VecDeque<i64>,
     output: Vec<i64>,
+
+    // trace of (instr_ptr, instruction)
+    // `instruction` includes the parameter modes
+    // for debugging only
+    instructions_trace: Vec<(usize, i64)>,
 }
 
 const POSITION_MODE: i64 = 0;
 const IMMEDIATE_MODE: i64 = 1;
+const RELATIVE_POSITION_MODE: i64 = 2;
+
+// The computer's available memory should be much larger than the initial program.
+// "much larger". Thank you, for this precise statement.
+const INITIAL_MEMORY_SIZE: usize = 1_000_000;
 
 impl Program {
     fn new(serialized_memory: &str) -> Self {
         Self::from_memory(Self::parse_memory(serialized_memory))
     }
 
-    fn from_memory(memory: Vec<i64>) -> Self {
+    fn from_memory(mut memory: Vec<i64>) -> Self {
+        // at least double the size is "much larger", right?
+        assert!(2 * memory.len() < INITIAL_MEMORY_SIZE);
+        memory.resize(INITIAL_MEMORY_SIZE, 0);
         Self {
             memory,
             instr_ptr: 0,
+            relative_base: 0,
             input: VecDeque::new(),
             output: vec![],
+            instructions_trace: vec![],
         }
     }
 
@@ -129,10 +149,18 @@ impl Program {
         program.output
     }
 
+    fn debug_execute(serialized_memory: &str, input: impl Into<VecDeque<i64>>) -> Self {
+        let mut program = Self::new(serialized_memory);
+        program.input = input.into();
+        program.run();
+        program
+    }
+
     fn run(&mut self) -> ProgramState {
         loop {
             let instruction = self.memory[self.instr_ptr];
             let opcode = instruction % 100;
+            self.instructions_trace.push((self.instr_ptr, instruction));
 
             let _old_instr_ptr = self.instr_ptr;
             match opcode {
@@ -146,14 +174,14 @@ impl Program {
                     };
                     let val1 = self.param_val(0);
                     let val2 = self.param_val(1);
-                    let result_pos = self.return_addr(2);
+                    let result_pos = self.param_address(2);
 
                     self.memory[result_pos] = op(val1, val2);
                     self.instr_ptr += 4;
                 }
                 // input
                 3 => {
-                    let return_pos = self.return_addr(0);
+                    let return_pos = self.param_address(0);
                     match self.input.pop_front() {
                         Some(value) => self.memory[return_pos] = value,
                         None => return ProgramState::RequiresInput,
@@ -182,9 +210,14 @@ impl Program {
                         8 => PartialOrd::eq,
                         _ => unreachable!(),
                     };
-                    let return_pos = self.return_addr(2);
+                    let return_pos = self.param_address(2);
                     self.memory[return_pos] = comparator(&self.param_val(0), &self.param_val(1)) as _;
                     self.instr_ptr += 4;
+                }
+                9 => {
+                    let new_pos = self.relative_base as i64 + self.param_val(0);
+                    self.relative_base = new_pos.try_into().unwrap();
+                    self.instr_ptr += 2;
                 }
                 99 => break,
                 _ => unreachable!(),
@@ -196,24 +229,28 @@ impl Program {
     }
 
     fn param_val(&self, param_nr: u32) -> i64 {
-        let param_modes = self.memory[self.instr_ptr] / 100;
-        let param_mode = param_modes / 10i64.pow(param_nr) % 10;
-        self._param_val(param_nr, param_mode)
-    }
-
-    fn _param_val(&self, param_nr: u32, param_mode: i64) -> i64 {
-        let param_offset = param_nr as usize + 1;
-        let address = match param_mode {
-            POSITION_MODE => self.memory[self._param_idx(param_offset)] as usize,
-            IMMEDIATE_MODE => self._param_idx(param_offset),
-            _ => unreachable!(),
-        };
+        let address = self.param_address(param_nr);
         self.memory[address]
     }
 
-    fn return_addr(&self, param_nr: u32) -> usize {
-        // resolution will be done by caller when assigning to it
-        self._param_val(param_nr, IMMEDIATE_MODE) as usize
+    fn param_address(&self, param_nr: u32) -> usize {
+        let param_offset = param_nr as usize + 1;
+        let param_idx = self._param_idx(param_offset);
+        let address = match self._param_mode(param_nr) {
+            POSITION_MODE => self.memory[param_idx] as usize,
+            IMMEDIATE_MODE => param_idx,
+            RELATIVE_POSITION_MODE => {
+                let pos = self.relative_base as i64 + self.memory[param_idx];
+                pos.try_into().unwrap()
+            },
+            _ => unreachable!(),
+        };
+        address
+    }
+
+    fn _param_mode(&self, param_nr: u32) -> i64 {
+        let param_modes = self.memory[self.instr_ptr] / 100;
+        param_modes / 10i64.pow(param_nr) % 10
     }
 
     fn _param_idx(&self, param_nr: usize) -> usize {
@@ -679,6 +716,46 @@ fn day_8(part: Part) {
     }
 }
 
+// ===============================================================================================
+//                                      Day 8
+// ===============================================================================================
+
+fn day_9(_part: Part) {
+    let input = include_str!("day_9_input.txt");
+    let output = Program::execute(input, vec![1]);
+    assert_eq!(output.len(), 1);
+    println!("day 9 part 1: {}", output[0]);
+}
+
+#[test]
+fn day_9_quine() {
+    let output = Program::execute(
+        "109,1,204,-1,1001,100,1,100,1008,100,16,101,1006,101,0,99",
+        vec![]
+    );
+    assert_eq!(
+        output, vec![109,1,204,-1,1001,100,1,100,1008,100,16,101,1006,101,0,99],
+    );
+}
+
+#[test]
+fn day_9_large_number() {
+    let output = Program::execute(
+        "1102,34915192,34915192,7,4,7,99,0",
+        vec![]
+    );
+    assert!(output.into_iter().all(|num| num >= 10i64.pow(15)));
+}
+
+#[test]
+fn day_9_output_large_number_as_is() {
+    let output = Program::execute(
+        "104,1125899906842624,99",
+        vec![]
+    );
+    assert_eq!(output, vec![1125899906842624]);
+}
+
 fn main() {
     // keep old code in here to avoid unused function warnings
     if false {
@@ -697,6 +774,7 @@ fn main() {
         day_7(Part::One);
         day_7(Part::Two);
         day_8(Part::One);
+        day_8(Part::Two);
     }
-    day_8(Part::Two);
+    day_9(Part::One);
 }
