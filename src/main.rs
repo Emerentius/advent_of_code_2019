@@ -6,7 +6,7 @@ use std::collections::BinaryHeap;
 use std::collections::BTreeSet;
 use std::convert::{TryInto, TryFrom};
 
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, PartialEq)]
 enum Part {
     One = 1,
     Two = 2,
@@ -764,26 +764,40 @@ fn day_9_output_large_number_as_is() {
 // ===============================================================================================
 
 // Angle stored as a 2D vector with minimized integer coefficients.
-#[derive(Copy, Clone, PartialEq, PartialOrd, Ord, Eq)]
-struct Angle {
+#[derive(Copy, Clone, PartialEq, PartialOrd, Ord, Eq, Debug)]
+struct Vec2D {
     x: i64,
     y: i64,
 }
 
-impl Angle {
+impl Vec2D {
     // x == y == 0 is forbidden
-    fn new(x: i64, y: i64) -> Option<Self> {
+    fn reduced(x: i64, y: i64) -> Self {
         let gcd = num::integer::gcd(x, y);
-        Some(
-            Angle {
-                x: x / gcd,
-                y: y / gcd,
-            }
-        )
+        Vec2D {
+            x: x / gcd,
+            y: y / gcd,
+        }
+    }
+
+    fn from_tuple((x, y): (i64, i64)) -> Self {
+        Vec2D { x, y }
     }
 }
 
-fn day_10(_part: Part) {
+impl std::ops::Add for Vec2D {
+    type Output = Self;
+
+    fn add(self, other: Self) -> Self {
+        Vec2D {
+            x: self.x + other.x,
+            y: self.y + other.y,
+        }
+    }
+}
+
+fn day_10(part: Part) {
+    use ord_subset::OrdSubsetSliceExt;
     let input = include_str!("day_10_input.txt");
     // true, if asteroid is at position
     let asteroid_grid: Vec<bool> = input
@@ -807,16 +821,61 @@ fn day_10(_part: Part) {
         .max()
         .unwrap();
 
-    println!("day 10 part 1: {} asteroids visible (position: {:?})", n_asteroids, best_position);
+    match part {
+        Part::One => {
+            println!("day 10 part 1: {} asteroids visible (position: {:?})", n_asteroids, best_position);
+        }
+        Part::Two => {
+            // there are more asteroids than 200 so I can safely ignore multiple rotations
+            let angles = angles_with_asteroids_visible(best_position, asteroid_positions);
+            // and their angles
+            let mut visible_asteroids = angles
+                .into_iter()
+                .map(|angle| {
+                    let asteroid_position = closest_visible_asteroid_in_direction(&asteroid_grid, width, best_position, angle);
+                    (asteroid_position, angle)
+                })
+                .collect::<Vec<_>>();
+
+            // sort by angle
+            visible_asteroids.ord_subset_sort_by_key(|(_, angle)| {
+                use std::f64::consts::PI;
+                // map direction vec to float of the angle, 0 for straight up and increasing clock-wise
+                // wish I could put a picture here of the derivation
+                (PI - f64::atan2(angle.x as f64, angle.y as f64)) % (2.0 * PI)
+            });
+
+            let (Vec2D { x, y }, _) = visible_asteroids[199];
+            println!("day 10 part 2: {}", x * 100 + y);
+        }
+    }
 }
 
 fn n_asteroids_visible_from_pos(pos: (i64, i64), asteroid_positions: impl Iterator<Item = (i64, i64)>) -> usize {
+    angles_with_asteroids_visible(pos, asteroid_positions).len()
+}
+
+fn angles_with_asteroids_visible(pos: (i64, i64), asteroid_positions: impl Iterator<Item = (i64, i64)>) -> BTreeSet<Vec2D> {
     let (x, y) = pos;
     asteroid_positions
         .filter(|&other_pos| pos != other_pos)
-        .map(|(x_ast, y_ast)| Angle::new(x - x_ast, y - y_ast))
+        .map(|(x_ast, y_ast)| Vec2D::reduced(x_ast - x, y_ast - y))
         .collect::<BTreeSet<_>>()
-        .len()
+}
+
+// only use with angles from `angles_with_asteroids_visible`
+// or it will panic
+fn closest_visible_asteroid_in_direction(
+    asteroid_grid: &[bool],
+    width: i64,
+    pos: (i64, i64),
+    angle: Vec2D,
+) -> Vec2D {
+    let pos = Vec2D::from_tuple(pos);
+    std::iter::successors(Some(pos), |&old_pos| Some(old_pos + angle))
+        .skip(1) // don't count station itself
+        .find(|pos| asteroid_grid[(width * pos.y + pos.x) as usize])
+        .unwrap()
 }
 
 // code for printing asteroid grid with amount of visible asteroids
@@ -854,6 +913,7 @@ fn main() {
         day_8(Part::Two);
         day_9(Part::One);
         day_9(Part::Two);
+        day_10(Part::One);
     }
-    day_10(Part::One);
+    day_10(Part::Two);
 }
