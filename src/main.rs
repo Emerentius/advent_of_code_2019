@@ -3,7 +3,8 @@ use std::collections::VecDeque;
 use std::collections::HashMap;
 use std::collections::HashSet;
 use std::collections::BinaryHeap;
-use std::convert::TryInto;
+use std::collections::BTreeSet;
+use std::convert::{TryInto, TryFrom};
 
 #[derive(Copy, Clone)]
 enum Part {
@@ -719,7 +720,7 @@ fn day_8(part: Part) {
 }
 
 // ===============================================================================================
-//                                      Day 8
+//                                      Day 9
 // ===============================================================================================
 
 fn day_9(part: Part) {
@@ -758,6 +759,80 @@ fn day_9_output_large_number_as_is() {
     assert_eq!(output, vec![1125899906842624]);
 }
 
+// ===============================================================================================
+//                                      Day 10
+// ===============================================================================================
+
+// Angle stored as a 2D vector with minimized integer coefficients.
+#[derive(Copy, Clone, PartialEq, PartialOrd, Ord, Eq)]
+struct Angle {
+    x: i64,
+    y: i64,
+}
+
+impl Angle {
+    // x == y == 0 is forbidden
+    fn new(x: i64, y: i64) -> Option<Self> {
+        let gcd = num::integer::gcd(x, y);
+        Some(
+            Angle {
+                x: x / gcd,
+                y: y / gcd,
+            }
+        )
+    }
+}
+
+fn day_10(_part: Part) {
+    let input = include_str!("day_10_input.txt");
+    // true, if asteroid is at position
+    let asteroid_grid: Vec<bool> = input
+        .chars()
+        .filter(|ch| !ch.is_whitespace())
+        .map(|ch| ch == '#')
+        .collect();
+
+    let width = input.lines().next().unwrap().len() as i64;
+    let height = input.lines().count();
+
+    let idx = |x, y| usize::try_from(y * width + x).unwrap();
+
+    let all_positions = (0..width as i64)
+        .flat_map(|x| (0..height as i64).map(move |y| (x, y)));
+    let asteroid_positions = all_positions.filter(|&(x, y)| asteroid_grid[idx(x,y)]);
+
+    let (n_asteroids, best_position) = asteroid_positions
+        .clone()
+        .map(|pos| (n_asteroids_visible_from_pos(pos, asteroid_positions.clone()), pos))
+        .max()
+        .unwrap();
+
+    println!("day 10 part 1: {} asteroids visible (position: {:?})", n_asteroids, best_position);
+}
+
+fn n_asteroids_visible_from_pos(pos: (i64, i64), asteroid_positions: impl Iterator<Item = (i64, i64)>) -> usize {
+    let (x, y) = pos;
+    asteroid_positions
+        .filter(|&other_pos| pos != other_pos)
+        .map(|(x_ast, y_ast)| Angle::new(x - x_ast, y - y_ast))
+        .collect::<BTreeSet<_>>()
+        .len()
+}
+
+// code for printing asteroid grid with amount of visible asteroids
+// marked
+//
+// for y in 0..height as i64 {
+//     for x in 0..width as i64 {
+//         if asteroid_grid[idx(x, y)] {
+//             print!("{}", n_asteroids_visible_from_pos((x, y), asteroid_positions.clone()));
+//         } else {
+//             print!(".");
+//         }
+//     }
+//     println!();
+// }
+
 fn main() {
     // keep old code in here to avoid unused function warnings
     if false {
@@ -778,6 +853,7 @@ fn main() {
         day_8(Part::One);
         day_8(Part::Two);
         day_9(Part::One);
+        day_9(Part::Two);
     }
-    day_9(Part::Two);
+    day_10(Part::One);
 }
