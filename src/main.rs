@@ -978,28 +978,16 @@ fn day_11(part: Part) {
     match part {
         Part::One => println!("{}", panels_painted.len()),
         Part::Two => {
-            // find first row and col to filter out empty lines and dedent the output
-            // so that it's printed out nicely. Could also just look at it
-            // in an editor ¯\_(ツ)_/¯
-            let mut nonempty_rows = panel_color
-                .iter()
-                .enumerate()
-                .filter(|(_, row)| row.iter().any(|&color| color == WHITE));
-            let (first_row, _) = nonempty_rows.next().unwrap();
-            let (last_row, _) = nonempty_rows.last().unwrap();
-            let first_col = panel_color
-                .iter()
-                .flat_map(|row| row.iter().enumerate().find(|(_, &color)| color == WHITE))
-                .map(|(col_nr, _)| col_nr)
-                .min()
-                .unwrap();
-
-            for row in &panel_color[first_row..=last_row] {
-                for color in row[first_col..].iter().copied() {
-                    print!("{0}{0}", if color == WHITE { '█' } else { ' ' });
-                }
-                println!();
-            }
+            let printed_panel = panel_color
+                .into_iter()
+                .map(|row| row.iter()
+                    .map(|&color| if color == WHITE { "██"} else { "  " })
+                    .collect::<String>()
+                )
+                .filter(|s| !s.trim().is_empty())
+                .join("\n");
+            let printed_panel = textwrap::dedent(&printed_panel);
+            println!("{}", printed_panel);
         }
     }
 }
