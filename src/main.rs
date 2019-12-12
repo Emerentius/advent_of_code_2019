@@ -1001,34 +1001,48 @@ fn day_12(part: Part) {
     let puzzle_input = include_str!("day_12_input.txt");
     let pattern = regex::Regex::new(r"<x=(-?\d+), y=(-?\d+), z=(-?\d+)>").unwrap();
 
-    let mut moon_positions: Vec<[INT; 3]> = puzzle_input.lines()
-        .map(|line| pattern.captures(line).unwrap())
-        .map(|capts| {
-            let nth_coord = |n: usize| capts[n].parse::<INT>().unwrap();
-            [nth_coord(1), nth_coord(2), nth_coord(3)]
-        })
-        .collect();
-    let mut moon_velocities = vec![[0,0,0]; moon_positions.len()];
+    let mut moon_positions = [vec![], vec![], vec![]];
+    for line in puzzle_input.lines() {
+        let captures = pattern.captures(line).unwrap();
+        for axis in 0..3 {
+            let coord = captures[axis+1].parse::<INT>().unwrap();
+            moon_positions[axis].push(coord);
+        }
+    }
+    let n_moons = moon_positions[0].len();
+    assert_eq!(n_moons, 4);
+    let mut moon_velocities = [
+        vec![0; n_moons],
+        vec![0; n_moons],
+        vec![0; n_moons],
+    ];
 
-    for _ in 0..DAY_12_SIMULATION_STEPS {
-        for (&moon1_pos, moon1_vel) in moon_positions.iter().zip(&mut moon_velocities) {
-            for &moon2_pos in moon_positions.iter() {
-                for axis in 0..3 {
-                    moon1_vel[axis] += (moon2_pos[axis] - moon1_pos[axis]).signum();
+
+    for axis in 0..3 {
+        for _ in 0..DAY_12_SIMULATION_STEPS {
+            let axis_positions = &mut moon_positions[axis];
+            let axis_velocities = &mut moon_velocities[axis];
+            for (&moon1_pos, moon1_vel) in axis_positions.iter().zip(&mut axis_velocities[..]) {
+                for &moon2_pos in axis_positions.iter() {
+                        *moon1_vel += (moon2_pos - moon1_pos).signum();
                 }
             }
-        }
 
-        for (moon_pos, &moon_velocity) in moon_positions.iter_mut().zip(moon_velocities.iter()) {
-            for axis in 0..3 {
-                moon_pos[axis] += moon_velocity[axis];
+            for (moon_pos, &moon_velocity) in axis_positions.iter_mut().zip(axis_velocities.iter()) {
+                *moon_pos += moon_velocity;
             }
         }
     }
+    let vector_energy = |vector_collection: &[Vec<INT>; 3], n_moon| {
+        vector_collection
+            .iter()
+            .map(|axis_collection| axis_collection[n_moon])
+            .map(INT::abs)
+            .sum::<INT>()
+    };
 
-    let vector_energy = |vector: [INT; 3]| vector.iter().copied().map(INT::abs).sum::<INT>();
-    let total_energy = moon_positions.iter().zip(moon_velocities.iter())
-        .map(|(&pos, &vel)| vector_energy(pos) * vector_energy(vel))
+    let total_energy = (0..n_moons)
+        .map(|n_moon| vector_energy(&moon_positions, n_moon) * vector_energy(&moon_velocities, n_moon))
         .sum::<INT>();
 
     println!("day 12 part 1: {}", total_energy);
