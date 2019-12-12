@@ -991,6 +991,48 @@ fn day_11(part: Part) {
         }
     }
 }
+// ===============================================================================================
+//                                      Day 12
+// ===============================================================================================
+const DAY_12_SIMULATION_STEPS: u32 = 1000;
+type INT = i16;
+
+fn day_12(part: Part) {
+    let puzzle_input = include_str!("day_12_input.txt");
+    let pattern = regex::Regex::new(r"<x=(-?\d+), y=(-?\d+), z=(-?\d+)>").unwrap();
+
+    let mut moon_positions: Vec<[INT; 3]> = puzzle_input.lines()
+        .map(|line| pattern.captures(line).unwrap())
+        .map(|capts| {
+            let nth_coord = |n: usize| capts[n].parse::<INT>().unwrap();
+            [nth_coord(1), nth_coord(2), nth_coord(3)]
+        })
+        .collect();
+    let mut moon_velocities = vec![[0,0,0]; moon_positions.len()];
+
+    for _ in 0..DAY_12_SIMULATION_STEPS {
+        for (&moon1_pos, moon1_vel) in moon_positions.iter().zip(&mut moon_velocities) {
+            for &moon2_pos in moon_positions.iter() {
+                for axis in 0..3 {
+                    moon1_vel[axis] += (moon2_pos[axis] - moon1_pos[axis]).signum();
+                }
+            }
+        }
+
+        for (moon_pos, &moon_velocity) in moon_positions.iter_mut().zip(moon_velocities.iter()) {
+            for axis in 0..3 {
+                moon_pos[axis] += moon_velocity[axis];
+            }
+        }
+    }
+
+    let vector_energy = |vector: [INT; 3]| vector.iter().copied().map(INT::abs).sum::<INT>();
+    let total_energy = moon_positions.iter().zip(moon_velocities.iter())
+        .map(|(&pos, &vel)| vector_energy(pos) * vector_energy(vel))
+        .sum::<INT>();
+
+    println!("day 12 part 1: {}", total_energy);
+}
 
 fn main() {
     // keep old code in here to avoid unused function warnings
@@ -1016,6 +1058,7 @@ fn main() {
         day_10(Part::One);
         day_10(Part::Two);
         day_11(Part::One);
+        day_11(Part::Two);
     }
-    day_11(Part::Two);
+    day_12(Part::One);
 }
