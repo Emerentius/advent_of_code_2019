@@ -907,6 +907,71 @@ fn day_10_part2(b: &mut test::Bencher) {
     b.iter(|| day_10(Part::Two));
 }
 
+// ===============================================================================================
+//                                      Day 11
+// ===============================================================================================
+const TURN_LEFT: i64 = 0;
+const TURN_RIGHT: i64 = 1;
+
+const PANEL_SIDELENGTH: usize = 100;
+
+const LEFT: Vec2D = Vec2D { x: -1, y: 0 };
+const RIGHT: Vec2D = Vec2D { x: 1, y: 0 };
+const UP: Vec2D = Vec2D { x: 0, y: -1 };
+const DOWN: Vec2D = Vec2D { x: 0, y: 1 };
+
+fn day_11(_part: Part) {
+    // .....> x
+    // |
+    // |
+    // v  y
+
+    let middle = PANEL_SIDELENGTH as i16 / 2;
+    let mut pos = Vec2D { x: middle, y: middle };
+    let mut direction = Vec2D { x: 0, y: -1 };
+
+    let turn_left = |direction| match direction {
+        UP => LEFT,
+        LEFT => DOWN,
+        DOWN => RIGHT,
+        RIGHT => UP,
+        _ => unreachable!(),
+    };
+
+    // row major
+    let mut panel_color = vec![[0; PANEL_SIDELENGTH]; PANEL_SIDELENGTH];
+
+    let mut program = Program::new(include_str!("day_11_input.txt"));
+
+    let mut panels_painted = HashSet::new();
+    loop {
+        let current_color = panel_color[pos.y as usize][pos.x as usize];
+        program.input.push_back(current_color);
+        let program_state = program.run();
+
+        let new_color = program.output[0];
+        direction = match program.output[1] {
+            TURN_LEFT => turn_left(direction),
+            // 3 lefts is 1 right
+            TURN_RIGHT => turn_left(turn_left(turn_left(direction))),
+            _ => unreachable!(),
+        };
+        program.output.clear();
+
+        // puzzle is unclear on what counts as painting.
+        // is black over black painting? Easier to count it as yes.
+        panels_painted.insert(pos);
+        panel_color[pos.y as usize][pos.x as usize] = new_color;
+        pos = pos + direction;
+
+        if program_state == ProgramState::Finished {
+            break;
+        }
+    }
+
+    println!("{}", panels_painted.len());
+}
+
 fn main() {
     // keep old code in here to avoid unused function warnings
     if false {
@@ -929,6 +994,7 @@ fn main() {
         day_9(Part::One);
         day_9(Part::Two);
         day_10(Part::One);
+        day_10(Part::Two);
     }
-    day_10(Part::Two);
+    day_11(Part::One);
 }
