@@ -7,7 +7,6 @@ use std::collections::VecDeque;
 use std::collections::HashMap;
 use std::collections::HashSet;
 use std::collections::BinaryHeap;
-use std::collections::BTreeSet;
 use std::convert::{TryInto, TryFrom};
 
 #[derive(Copy, Clone, PartialEq)]
@@ -913,6 +912,9 @@ fn day_10_part2(b: &mut test::Bencher) {
 const TURN_LEFT: i64 = 0;
 const TURN_RIGHT: i64 = 1;
 
+const BLACK: u8 = 0;
+const WHITE: u8 = 1;
+
 const PANEL_SIDELENGTH: usize = 100;
 
 const LEFT: Vec2D = Vec2D { x: -1, y: 0 };
@@ -920,7 +922,7 @@ const RIGHT: Vec2D = Vec2D { x: 1, y: 0 };
 const UP: Vec2D = Vec2D { x: 0, y: -1 };
 const DOWN: Vec2D = Vec2D { x: 0, y: 1 };
 
-fn day_11(_part: Part) {
+fn day_11(part: Part) {
     // .....> x
     // |
     // |
@@ -939,14 +941,18 @@ fn day_11(_part: Part) {
     };
 
     // row major
-    let mut panel_color = vec![[0; PANEL_SIDELENGTH]; PANEL_SIDELENGTH];
+    let mut panel_color = vec![[BLACK; PANEL_SIDELENGTH]; PANEL_SIDELENGTH];
+
+    if part == Part::Two {
+        panel_color[pos.y as usize][pos.x as usize] = WHITE;
+    }
 
     let mut program = Program::new(include_str!("day_11_input.txt"));
 
     let mut panels_painted = HashSet::new();
     loop {
         let current_color = panel_color[pos.y as usize][pos.x as usize];
-        program.input.push_back(current_color);
+        program.input.push_back(current_color as _);
         let program_state = program.run();
 
         let new_color = program.output[0];
@@ -961,7 +967,7 @@ fn day_11(_part: Part) {
         // puzzle is unclear on what counts as painting.
         // is black over black painting? Easier to count it as yes.
         panels_painted.insert(pos);
-        panel_color[pos.y as usize][pos.x as usize] = new_color;
+        panel_color[pos.y as usize][pos.x as usize] = new_color as _;
         pos = pos + direction;
 
         if program_state == ProgramState::Finished {
@@ -969,7 +975,33 @@ fn day_11(_part: Part) {
         }
     }
 
-    println!("{}", panels_painted.len());
+    match part {
+        Part::One => println!("{}", panels_painted.len()),
+        Part::Two => {
+            // find first row and col to filter out empty lines and dedent the output
+            // so that it's printed out nicely. Could also just look at it
+            // in an editor ¯\_(ツ)_/¯
+            let mut nonempty_rows = panel_color
+                .iter()
+                .enumerate()
+                .filter(|(_, row)| row.iter().any(|&color| color == WHITE));
+            let (first_row, _) = nonempty_rows.next().unwrap();
+            let (last_row, _) = nonempty_rows.last().unwrap();
+            let first_col = panel_color
+                .iter()
+                .flat_map(|row| row.iter().enumerate().find(|(_, &color)| color == WHITE))
+                .map(|(col_nr, _)| col_nr)
+                .min()
+                .unwrap();
+
+            for row in &panel_color[first_row..=last_row] {
+                for color in row[first_col..].iter().copied() {
+                    print!("{0}{0}", if color == WHITE { '█' } else { ' ' });
+                }
+                println!();
+            }
+        }
+    }
 }
 
 fn main() {
@@ -995,6 +1027,7 @@ fn main() {
         day_9(Part::Two);
         day_10(Part::One);
         day_10(Part::Two);
+        day_11(Part::One);
     }
-    day_11(Part::One);
+    day_11(Part::Two);
 }
