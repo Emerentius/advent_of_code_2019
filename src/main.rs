@@ -1017,35 +1017,77 @@ fn day_12(part: Part) {
         vec![0; n_moons],
     ];
 
-
-    for axis in 0..3 {
-        for _ in 0..DAY_12_SIMULATION_STEPS {
-            let axis_positions = &mut moon_positions[axis];
-            let axis_velocities = &mut moon_velocities[axis];
-            for (&moon1_pos, moon1_vel) in axis_positions.iter().zip(&mut axis_velocities[..]) {
-                for &moon2_pos in axis_positions.iter() {
-                        *moon1_vel += (moon2_pos - moon1_pos).signum();
+    match part {
+        Part::One => {
+            for axis in 0..3 {
+                for _ in 0..DAY_12_SIMULATION_STEPS {
+                    simulate_step(&mut moon_positions[axis], &mut moon_velocities[axis]);
                 }
             }
+            let vector_energy = |vector_collection: &[Vec<INT>; 3], n_moon| {
+                vector_collection
+                    .iter()
+                    .map(|axis_collection| axis_collection[n_moon])
+                    .map(INT::abs)
+                    .sum::<INT>()
+            };
 
-            for (moon_pos, &moon_velocity) in axis_positions.iter_mut().zip(axis_velocities.iter()) {
-                *moon_pos += moon_velocity;
-            }
+            let total_energy = (0..n_moons)
+                .map(|n_moon| vector_energy(&moon_positions, n_moon) * vector_energy(&moon_velocities, n_moon))
+                .sum::<INT>();
+
+            println!("day 12 part 1: {}", total_energy);
+        }
+        Part::Two => {
+            // find the cycle length of each axis separately
+            let cycle_lengths = (0..3)
+                .map(|axis| {
+                    let axis_positions = &mut moon_positions[axis];
+                    let axis_velocities = &mut moon_velocities[axis];
+                    let initial_positions = axis_positions.clone();
+                    let initial_velocities = vec![0; n_moons];
+
+                    // compute cycle length
+                    // the first state that the system will encounter
+                    // that it has already seen, will be the very first state.
+                    // Classic result from statistical mechanics. The phasespace path
+                    // will never cross itself, because
+                    // 1. the system's behaviour is determined purely from its current state
+                    // 2. it's time-inversion symmetric
+                    // Thus there can only be two paths going into and out of every point.
+                    // One forward in time, one backward.
+                    (1..)
+                        .find_map(|n_step| {
+                            simulate_step(axis_positions, axis_velocities);
+                            if *axis_positions == initial_positions && *axis_velocities == initial_velocities {
+                                Some(n_step)
+                            } else {
+                                None
+                            }
+                        })
+                        .unwrap()
+                })
+                .collect::<Vec<i64>>();
+
+            use num::integer::lcm;
+            // lcm(a,b,c) == lcm(lcm(a,b), c)
+            let c = cycle_lengths;
+            let total_cycle_length = lcm(lcm(c[0], c[1]), c[2]);
+            println!("day 12 part 2: {}", total_cycle_length);
         }
     }
-    let vector_energy = |vector_collection: &[Vec<INT>; 3], n_moon| {
-        vector_collection
-            .iter()
-            .map(|axis_collection| axis_collection[n_moon])
-            .map(INT::abs)
-            .sum::<INT>()
-    };
+}
 
-    let total_energy = (0..n_moons)
-        .map(|n_moon| vector_energy(&moon_positions, n_moon) * vector_energy(&moon_velocities, n_moon))
-        .sum::<INT>();
+fn simulate_step(axis_positions: &mut [i16], axis_velocities: &mut [i16]) {
+    for (&moon1_pos, moon1_vel) in axis_positions.iter().zip(&mut axis_velocities[..]) {
+        for &moon2_pos in axis_positions.iter() {
+                *moon1_vel += (moon2_pos - moon1_pos).signum();
+        }
+    }
 
-    println!("day 12 part 1: {}", total_energy);
+    for (moon_pos, &moon_velocity) in axis_positions.iter_mut().zip(axis_velocities.iter()) {
+        *moon_pos += moon_velocity;
+    }
 }
 
 fn main() {
@@ -1073,6 +1115,7 @@ fn main() {
         day_10(Part::Two);
         day_11(Part::One);
         day_11(Part::Two);
+        day_12(Part::One);
     }
-    day_12(Part::One);
+    day_12(Part::Two);
 }
