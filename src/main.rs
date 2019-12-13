@@ -9,6 +9,12 @@ use std::collections::HashSet;
 use std::collections::BinaryHeap;
 use std::convert::{TryInto, TryFrom};
 
+macro_rules! puzzle_input {
+    ($day: expr) => {
+        include_str!( concat!("day_", stringify!($day), "_input.txt" ) )
+    };
+}
+
 #[derive(Copy, Clone, PartialEq)]
 enum Part {
     One = 1,
@@ -36,7 +42,7 @@ fn fuel_for_module(mass: i64) -> i64 {
 }
 
 fn day_1(part: crate::Part) {
-    static INPUT: &str = include_str!("day_1_input.txt");
+    static INPUT: &str = puzzle_input!(1);
     let fuel_for_module = match part {
         Part::One => naive_fuel_for_module,
         Part::Two => fuel_for_module,
@@ -68,7 +74,7 @@ const VERB_PTR: usize = 2;
 const DAY_2_PART_2_REQUIRED_OUTPUT: i64 = 19690720;
 
 fn day_2(part: crate::Part) {
-    let input = include_str!("day_2_input.txt");
+    let input = puzzle_input!(2);
     let mut memory = Program::parse_memory(input);
 
     match part {
@@ -281,7 +287,7 @@ fn day_3(part: Part) {
 }
 
 fn day_3_part_1() {
-    let input = include_str!("day_3_input.txt");
+    let input = puzzle_input!(3);
 
     let mut wires_on_cell = HashMap::new();
 
@@ -320,7 +326,7 @@ fn day_3_part_1() {
 }
 
 fn day_3_part_2() {
-    let input = include_str!("day_3_input.txt");
+    let input = puzzle_input!(3);
 
     let mut wires_on_cell = HashMap::new();
 
@@ -424,7 +430,7 @@ fn day_4(part: Part) {
 // ===============================================================================================
 
 fn day_5(part: Part) {
-    let puzzle_input = include_str!("day_5_input.txt");
+    let puzzle_input = puzzle_input!(5);
     let input = match part {
         Part::One => 1,
         Part::Two => 5,
@@ -514,7 +520,7 @@ fn day_6(part: Part) {
     // different performance tradeoffs, but can't tell from this small example
     // what's necessary.
     // orbited-by relations make computing the checksum cheaper, so I went for that
-    let input = include_str!("day_6_input.txt");
+    let input = puzzle_input!(6);
 
     let orbited_orbiter_pairs = input.lines()
         .map(|line| {
@@ -665,7 +671,7 @@ const PIXEL_ON: u8 = 1;
 const PIXEL_TRANSPARENT: u8 = 2;
 
 fn day_8(part: Part) {
-    let input = include_str!("day_8_input.txt");
+    let input = puzzle_input!(8);
     const WIDTH: usize = 25;
     const HEIGHT: usize = 6;
     const N_PIXELS_PER_LAYER: usize = WIDTH * HEIGHT;
@@ -727,7 +733,7 @@ fn day_8(part: Part) {
 // ===============================================================================================
 
 fn day_9(part: Part) {
-    let input = include_str!("day_9_input.txt");
+    let input = puzzle_input!(9);
     let output = Program::execute(input, vec![part as i64]);
     assert_eq!(output.len(), 1);
     println!("day 9 part {}: {}", part as i64, output[0]);
@@ -801,7 +807,7 @@ impl std::ops::Add for Vec2D {
 
 fn day_10(part: Part) {
     use ord_subset::OrdSubsetSliceExt;
-    let input = include_str!("day_10_input.txt");
+    let input = puzzle_input!(10);
     // true, if asteroid is at position
     let asteroid_grid: Vec<bool> = input
         .chars()
@@ -998,7 +1004,7 @@ const DAY_12_SIMULATION_STEPS: u32 = 1000;
 type INT = i16;
 
 fn day_12(part: Part) {
-    let puzzle_input = include_str!("day_12_input.txt");
+    let puzzle_input = puzzle_input!(12);
     let pattern = regex::Regex::new(r"<x=(-?\d+), y=(-?\d+), z=(-?\d+)>").unwrap();
 
     let mut moon_positions = [vec![], vec![], vec![]];
