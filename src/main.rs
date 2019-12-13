@@ -1054,8 +1054,9 @@ fn day_12(part: Part) {
                     // will never cross itself, because
                     // 1. the system's behaviour is determined purely from its current state
                     // 2. it's time-inversion symmetric
-                    // Thus there can only be two paths going into and out of every point.
+                    // Thus there can only be at most two paths going into and out of every point.
                     // One forward in time, one backward.
+                    // Cycles aren't guaranteed though.
                     (1..)
                         .find_map(|n_step| {
                             simulate_step(axis_positions, axis_velocities);
@@ -1088,6 +1089,16 @@ fn simulate_step(axis_positions: &mut [i16], axis_velocities: &mut [i16]) {
     for (moon_pos, &moon_velocity) in axis_positions.iter_mut().zip(axis_velocities.iter()) {
         *moon_pos += moon_velocity;
     }
+}
+
+#[bench]
+fn day_12_part1(b: &mut test::Bencher) {
+    b.iter(|| day_12(Part::One));
+}
+
+#[bench]
+fn day_12_part2(b: &mut test::Bencher) {
+    b.iter(|| day_12(Part::Two));
 }
 
 fn main() {
