@@ -1103,6 +1103,30 @@ fn day_12_part2(b: &mut test::Bencher) {
     b.iter(|| day_12(Part::Two));
 }
 
+// ===============================================================================================
+//                                      Day 13
+// ===============================================================================================
+const BLOCK_TILE: i64 = 2;
+
+fn day_13(_part: Part) {
+    let output = Program::execute(puzzle_input!(13), vec![]);
+    let mut panel = [[0; 80]; 80];
+
+    for chunk in output.chunks(3) {
+        if let &[x, y, tile_id] = chunk {
+            panel[y as usize][x as usize] = tile_id;
+        } else {
+            unreachable!();
+        }
+    }
+
+    let solution = panel.iter()
+        .flat_map(|row| row.iter())
+        .filter(|&&tile_id| tile_id == BLOCK_TILE)
+        .count();
+    println!("day 13 part 1: {}", solution);
+}
+
 fn main() {
     // keep old code in here to avoid unused function warnings
     if false {
@@ -1129,6 +1153,7 @@ fn main() {
         day_11(Part::One);
         day_11(Part::Two);
         day_12(Part::One);
+        day_12(Part::Two);
     }
-    day_12(Part::Two);
+    day_13(Part::One);
 }
