@@ -1058,13 +1058,9 @@ fn day_12(part: Part) {
                     // One forward in time, one backward.
                     // Cycles aren't guaranteed though.
                     (1..)
-                        .find_map(|n_step| {
+                        .find(|_| {
                             simulate_step(axis_positions, axis_velocities);
-                            if *axis_positions == initial_positions && *axis_velocities == initial_velocities {
-                                Some(n_step)
-                            } else {
-                                None
-                            }
+                            *axis_positions == initial_positions && *axis_velocities == initial_velocities
                         })
                         .unwrap()
                 })
