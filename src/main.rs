@@ -1131,14 +1131,17 @@ fn day_13(_part: Part) {
 //                                      Day 14
 // ===============================================================================================
 
-fn day_14(_part: Part) {
+// Hashmap[material] = (amount_produced, Requirements(amount, name))
+type Recipes<'a> = HashMap<&'a str, (u64, Vec<(u64, &'a str)>)>;
+
+fn day_14(part: Part) {
     let component_pattern = regex::Regex::new(r"(\d+) (\w+)").unwrap();
 
     let mut recipes = puzzle_input!(14)
         .lines()
         .map(|line| {
             let mut components = component_pattern.captures_iter(line)
-                .map(|cap| (cap[1].parse::<u32>().unwrap(), cap.get(2).unwrap().as_str()))
+                .map(|cap| (cap[1].parse::<u64>().unwrap(), cap.get(2).unwrap().as_str()))
                 .collect::<Vec<_>>();
             let (output_amount, output_name) = components.pop().unwrap();
             (output_name, (output_amount, components))
@@ -1150,18 +1153,40 @@ fn day_14(_part: Part) {
     // other recipe-less materials (aka bugs).
     recipes.insert("ORE", (1, vec![]));
 
+    match part {
+        Part::One => println!("day 14 part 1: {}", n_required_ore(1, &recipes)),
+        Part::Two => {
+            // could do a binary search, but we can do a pretty good estimate already
+            // and then just linearly search. Yay, laziness.
+            let available_ore = 1_000_000_000_000;
+            // estimating from the requirements for 1000 fuel gives a much more precise estimate
+            let estimated_fuel = available_ore / n_required_ore(1000, &recipes) * 1000;
+
+            // estimated_fuel is a lower boundary
+            let max_fuel = (estimated_fuel..)
+                .take_while(|&n_fuel| n_required_ore(n_fuel, &recipes) <= available_ore)
+                .last()
+                .unwrap();
+            println!("{}", max_fuel);
+        }
+    }
+}
+
+fn n_required_ore(n_fuel: u64, recipes: &Recipes<'_>) -> u64 {
+    // map[ingredient] = (used, unused)
+    // the second part tracks overproduction from having to run integer amounts of the recipes
     let mut required_materials = HashMap::new();
-    update_requirements("FUEL", 1, &recipes, &mut required_materials);
-    let (required_ore, _) = required_materials["ORE"];
-    println!("day 14 part 1: {}", required_ore);
+    update_requirements("FUEL", n_fuel, &recipes, &mut required_materials);
+    let (used_ore, _) = required_materials["ORE"];
+    used_ore
 }
 
 // how does one sensibly name recursive functions?
 fn update_requirements<'a>(
     product_goal: &'a str,
-    product_demand: u32,
-    recipes: &HashMap<&str, (u32, Vec<(u32, &'a str)>)>,
-    required_materials: &mut HashMap<&'a str, (u32, u32)>,
+    product_demand: u64,
+    recipes: &Recipes<'a>,
+    required_materials: &mut HashMap<&'a str, (u64, u64)>,
 ) {
     let (used, free) = required_materials.entry(product_goal)
         .or_insert((0, 0));
@@ -1212,6 +1237,7 @@ fn main() {
         day_12(Part::One);
         day_12(Part::Two);
         day_13(Part::One);
+        day_14(Part::One);
     }
-    day_14(Part::One);
+    day_14(Part::Two);
 }
