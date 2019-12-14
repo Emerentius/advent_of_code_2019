@@ -1127,6 +1127,63 @@ fn day_13(_part: Part) {
     println!("day 13 part 1: {}", solution);
 }
 
+// ===============================================================================================
+//                                      Day 14
+// ===============================================================================================
+
+fn day_14(_part: Part) {
+    let component_pattern = regex::Regex::new(r"(\d+) (\w+)").unwrap();
+
+    let mut recipes = puzzle_input!(14)
+        .lines()
+        .map(|line| {
+            let mut components = component_pattern.captures_iter(line)
+                .map(|cap| (cap[1].parse::<u32>().unwrap(), cap.get(2).unwrap().as_str()))
+                .collect::<Vec<_>>();
+            let (output_amount, output_name) = components.pop().unwrap();
+            (output_name, (output_amount, components))
+        })
+        .collect::<HashMap<_, _>>();
+
+    // explicitly add ore without dependencies
+    // so I don't have to special case ORE in the search function or risk missing
+    // other recipe-less materials (aka bugs).
+    recipes.insert("ORE", (1, vec![]));
+
+    let mut required_materials = HashMap::new();
+    update_requirements("FUEL", 1, &recipes, &mut required_materials);
+    let (required_ore, _) = required_materials["ORE"];
+    println!("day 14 part 1: {}", required_ore);
+}
+
+// how does one sensibly name recursive functions?
+fn update_requirements<'a>(
+    product_goal: &'a str,
+    product_demand: u32,
+    recipes: &HashMap<&str, (u32, Vec<(u32, &'a str)>)>,
+    required_materials: &mut HashMap<&'a str, (u32, u32)>,
+) {
+    let (used, free) = required_materials.entry(product_goal)
+        .or_insert((0, 0));
+
+    *used += product_demand;
+    if product_demand <= *free {
+        *free -= product_demand;
+    } else {
+        // produce more
+        let leftover_demand = product_demand - *free;
+        let &(production_output, ref requirements) = &recipes[product_goal];
+        // compute ceil(product_demand / production_output)
+        let n_runs = (leftover_demand + production_output - 1) / production_output;
+        let n_produced = n_runs * production_output;
+        *free = n_produced - leftover_demand;
+
+        for &(ingredient_demand, ingredient) in requirements {
+            update_requirements(ingredient, n_runs * ingredient_demand, recipes, required_materials);
+        }
+    }
+}
+
 fn main() {
     // keep old code in here to avoid unused function warnings
     if false {
@@ -1154,6 +1211,7 @@ fn main() {
         day_11(Part::Two);
         day_12(Part::One);
         day_12(Part::Two);
+        day_13(Part::One);
     }
-    day_13(Part::One);
+    day_14(Part::One);
 }
